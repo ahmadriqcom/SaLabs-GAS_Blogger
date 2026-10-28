@@ -1,534 +1,396 @@
 /**
- * ============================================================================
- * GAS-BLOGGER GENERATOR: BACKEND STARTER BOILERPLATE (15 SECTIONS)
- * ============================================================================
- * Deskripsi: Backend REST-like API menggunakan Google Apps Script (GAS) dengan
- *            database Google Sheets, siap dihubungkan ke Frontend Blogger.
- * Arsitektur: 15 Section Modular, Concurrency-Safe (LockService), CORS-friendly.
- * ============================================================================
+ * ====================================================================
+ * BACKEND API GOOGLE APPS SCRIPT
+ * Standar Arsitektur: Decoupled Web App (Blogger + GAS + Spreadsheet)
+ * ====================================================================
  */
 
-/* ==========================================================================
- * SECTION 1: CONFIGURATION & CONSTANTS
- * ========================================================================== */
-const CONFIG = {
-  APP_NAME: 'SaLabs GAS Blogger API',
-  VERSION: '1.0.0',
-  DEFAULT_SHEET_NAME: 'Items',
-  LOCK_TIMEOUT_MS: 30000,       // 30 detik batas antrean LockService
-  CACHE_DURATION_SEC: 300,      // 5 menit cache durasi default
-  AUTH_REQUIRED: false,         // Set true jika ingin menggunakan validasi API Key
-  HEADERS: [
-    'id',
-    'title',
-    'category',
-    'content',
-    'status',
-    'author',
-    'created_at',
-    'updated_at'
-  ]
+// 1. CONFIGURATION
+const SPREADSHEET_ID = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+const APP_CONFIG = {
+  APP_NAME: "Web App Generator",
+  VERSION: "1.0.0",
+  SESSION_DURATION_HOURS: 24
 };
 
-/* ==========================================================================
- * SECTION 2: GLOBAL STATE & PROPERTIES MANAGER
- * ========================================================================== */
-const PropertiesManager = {
-  getSpreadsheetId: function() {
-    const props = PropertiesService.getScriptProperties();
-    let sheetId = props.getProperty('SPREADSHEET_ID');
-    if (!sheetId) {
-      // Fallback ke spreadsheet aktif jika script di-bind langsung
-      try {
-        sheetId = SpreadsheetApp.getActiveSpreadsheet().getId();
-      } catch (e) {
-        throw new Error('SPREADSHEET_ID belum dikonfigurasi di Script Properties!');
-      }
-    }
-    return sheetId;
-  },
-
-  getApiKey: function() {
-    return PropertiesService.getScriptProperties().getProperty('API_KEY') || 'default-secret-token';
-  },
-
-  setProperty: function(key, value) {
-    PropertiesService.getScriptProperties().setProperty(key, value);
-  }
-};
-
-/* ==========================================================================
- * SECTION 3: ENTRY POINTS (doGet & doPost)
- * ========================================================================== */
+// 2. API ENTRY POINT
 function doGet(e) {
-  try {
-    const params = (e && e.parameter) ? e.parameter : {};
-    const action = params.action || 'healthCheck';
-    return Router.dispatch(action, params, 'GET');
-  } catch (err) {
-    return ResponseFormatter.error(err.message, 500);
-  }
+  return jsonResponse({
+    success: true,
+    message: "API aktif dan siap menerima request.",
+    version: APP_CONFIG.VERSION
+  });
 }
 
 function doPost(e) {
   try {
-    let payload = {};
-    if (e && e.postData && e.postData.contents) {
-      try {
-        payload = JSON.parse(e.postData.contents);
-      } catch (jsonErr) {
-        // Fallback untuk x-www-form-urlencoded
-        payload = e.parameter || {};
-      }
-    } else if (e && e.parameter) {
-      payload = e.parameter;
+    const rawContent = e.postData && e.postData.contents ? e.postData.contents : '{}';
+    const request = JSON.parse(rawContent);
+
+    const action = request.action;
+    const payload = request.payload || {};
+    const token = request.token || null;
+
+    // 5. ROUTER
+    const routes = {
+      ping: () => ({ success: true, message: "PONG" }),
+      login: () => handleLogin(payload),
+      logout: () => handleLogout(token),
+      checkSession: () => handleCheckSession(token),
+      getItems: () => getItemsList(payload, token),
+      createItem: () => createItemRecord(payload, token),
+      updateItem: () => updateItemRecord(payload, token),
+      deleteItem: () => deleteItemRecord(payload, token)
+    };
+
+    if (!routes[action]) {
+      return jsonResponse({
+        success: false,
+        message: `Action '${action}' tidak valid atau tidak terdaftar.`,
+        errorCode: "INVALID_ACTION",
+        data: null
+      });
     }
 
-    const action = payload.action || (e && e.parameter && e.parameter.action) || 'ping';
-    return Router.dispatch(action, payload, 'POST');
-  } catch (err) {
-    return ResponseFormatter.error(err.message, 500);
+    const result = routes[action]();
+    return jsonResponse(result);
+  } catch (error) {
+    return jsonResponse({
+      success: false,
+      message: error.message || "Terjadi kesalahan pada internal server.",
+      errorCode: "SERVER_ERROR",
+      data: null
+    });
   }
 }
 
-/* ==========================================================================
- * SECTION 4: ROUTER & ACTION DISPATCHER
- * ========================================================================== */
-const Router = {
-  dispatch: function(action, payload, httpMethod) {
-    LoggerService.log('Incoming ' + httpMethod + ' action: ' + action);
+// 3. RESPONSE HELPERS
+function jsonResponse(result) {
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
 
-    // Verifikasi Token Keamanan (jika diaktifkan)
-    if (CONFIG.AUTH_REQUIRED && !SecurityManager.verifyAuth(payload)) {
-      return ResponseFormatter.error('Akses ditolak: API Key tidak valid.', 401);
-    }
-
-    switch (action) {
-      // Read Operations (Bisa dipanggil via GET / POST)
-      case 'ping':
-      case 'healthCheck':
-        return ResponseFormatter.success(HealthCheckService.run());
-
-      case 'list':
-      case 'getItems':
-        return ResponseFormatter.success(ItemService.list(payload));
-
-      case 'get':
-      case 'getItem':
-        return ResponseFormatter.success(ItemService.getById(payload.id));
-
-      case 'stats':
-        return ResponseFormatter.success(ItemService.getStats());
-
-      // Write Operations (Wajib Concurrency Lock via POST)
-      case 'create':
-      case 'addItem':
-        return LockEngine.executeWithLock(function() {
-          return ResponseFormatter.success(ItemService.create(payload.data || payload));
-        });
-
-      case 'update':
-      case 'editItem':
-        return LockEngine.executeWithLock(function() {
-          return ResponseFormatter.success(ItemService.update(payload.id, payload.data || payload));
-        });
-
-      case 'delete':
-      case 'deleteItem':
-        return LockEngine.executeWithLock(function() {
-          return ResponseFormatter.success(ItemService.remove(payload.id));
-        });
-
-      default:
-        return ResponseFormatter.error('Aksi tidak dikenali: ' + action, 404);
-    }
+// 4. REQUEST PARSER & SANITIZATION
+function sanitizeFormula(input) {
+  if (typeof input === 'string' && /^[=+\-@]/.test(input)) {
+    return "'" + input;
   }
-};
+  return input;
+}
 
-/* ==========================================================================
- * SECTION 5: CONCURRENCY & LOCK ENGINE
- * ========================================================================== */
-const LockEngine = {
-  executeWithLock: function(criticalFunction) {
-    const lock = LockService.getScriptLock();
-    const startTime = new Date().getTime();
-    const hasLock = lock.tryLock(CONFIG.LOCK_TIMEOUT_MS);
-
-    if (!hasLock) {
-      LoggerService.log('Lock timeout terlampaui setelah ' + (new Date().getTime() - startTime) + 'ms');
-      return ResponseFormatter.error('Server sedang sibuk memproses antrean data. Silakan coba kembali sesaat lagi.', 429);
-    }
-
-    try {
-      return criticalFunction();
-    } catch (error) {
-      LoggerService.error('Error saat lock aktif: ' + error.message, error.stack);
-      return ResponseFormatter.error(error.message, 500);
-    } finally {
-      lock.releaseLock();
-    }
+// 6. AUTHENTICATION & SESSION
+function handleLogin(payload) {
+  const { username, password } = payload;
+  if (!username || !password) {
+    return { success: false, message: "Username dan password wajib diisi.", errorCode: "INVALID_PAYLOAD" };
   }
-};
 
-/* ==========================================================================
- * SECTION 6: RESPONSE & CORS FORMATTER
- * ========================================================================== */
-const ResponseFormatter = {
-  json: function(dataObject) {
-    const output = ContentService.createTextOutput(JSON.stringify(dataObject));
-    output.setMimeType(ContentService.MimeType.JSON);
-    return output;
-  },
+  const sheet = getSheet("Users");
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return { success: false, message: "Pengguna tidak ditemukan.", errorCode: "USER_NOT_FOUND" };
 
-  success: function(data, message) {
-    return this.json({
-      success: true,
-      message: message || 'Operasi berhasil',
-      data: data,
-      timestamp: new Date().toISOString()
-    });
-  },
+  const headers = data[0];
+  const uIdx = headers.indexOf("username");
+  const pIdx = headers.indexOf("password_hash");
+  const sIdx = headers.indexOf("password_salt");
+  const rIdx = headers.indexOf("role");
+  const idIdx = headers.indexOf("id");
 
-  error: function(errorMessage, code) {
-    return this.json({
-      success: false,
-      code: code || 400,
-      error: errorMessage || 'Terjadi kesalahan sistem',
-      timestamp: new Date().toISOString()
-    });
-  }
-};
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[uIdx] === username && !row[headers.indexOf("deleted_at")]) {
+      const calculatedHash = hashPasswordWithSalt(password, row[sIdx]);
+      if (calculatedHash === row[pIdx]) {
+        const rawToken = Utilities.getUuid();
+        const tokenHash = hashToken(rawToken);
+        const expiresAt = new Date(Date.now() + APP_CONFIG.SESSION_DURATION_HOURS * 3600000).toISOString();
 
-/* ==========================================================================
- * SECTION 7: VALIDATION & SANITIZATION LAYER
- * ========================================================================== */
-const Validator = {
-  validateItemPayload: function(payload) {
-    if (!payload) throw new Error('Data payload tidak boleh kosong.');
-    if (!payload.title || typeof payload.title !== 'string' || payload.title.trim() === '') {
-      throw new Error('Kolom "title" wajib diisi.');
-    }
-    return {
-      title: Utils.sanitize(payload.title),
-      category: Utils.sanitize(payload.category || 'General'),
-      content: Utils.sanitize(payload.content || ''),
-      status: Utils.sanitize(payload.status || 'Draft'),
-      author: Utils.sanitize(payload.author || 'Anonymous')
-    };
-  }
-};
+        const sessionSheet = getSheet("Sessions");
+        sessionSheet.appendRow([
+          Utilities.getUuid(),
+          row[idIdx],
+          tokenHash,
+          expiresAt,
+          new Date().toISOString(),
+          new Date().toISOString(),
+          "",
+          payload.userAgent || "Unknown"
+        ]);
 
-/* ==========================================================================
- * SECTION 8: SECURITY & AUTHENTICATION
- * ========================================================================== */
-const SecurityManager = {
-  verifyAuth: function(payload) {
-    const clientKey = (payload && (payload.apiKey || payload.token)) || '';
-    return clientKey === PropertiesManager.getApiKey();
-  }
-};
-
-/* ==========================================================================
- * SECTION 9: DATABASE / SHEET ADAPTER
- * ========================================================================== */
-const SheetAdapter = {
-  getSpreadsheet: function() {
-    return SpreadsheetApp.openById(PropertiesManager.getSpreadsheetId());
-  },
-
-  getSheet: function(sheetName) {
-    const ss = this.getSpreadsheet();
-    let sheet = ss.getSheetByName(sheetName || CONFIG.DEFAULT_SHEET_NAME);
-    if (!sheet) {
-      sheet = ss.insertSheet(sheetName || CONFIG.DEFAULT_SHEET_NAME);
-      sheet.appendRow(CONFIG.HEADERS);
-    }
-    return sheet;
-  },
-
-  getAllRowsAsJSON: function(sheetName) {
-    const sheet = this.getSheet(sheetName);
-    const data = sheet.getDataRange().getValues();
-    if (data.length <= 1) return [];
-
-    const headers = data[0].map(function(h) { return String(h).trim(); });
-    const rows = [];
-
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-      const item = {};
-      for (let j = 0; j < headers.length; j++) {
-        item[headers[j]] = row[j];
-      }
-      item._rowIndex = i + 1; // 1-based index untuk keperluan update/delete
-      rows.push(item);
-    }
-    return rows;
-  },
-
-  appendRow: function(sheetName, rowArray) {
-    const sheet = this.getSheet(sheetName);
-    sheet.appendRow(rowArray);
-    SpreadsheetApp.flush();
-    return true;
-  },
-
-  findRowById: function(sheetName, id) {
-    const all = this.getAllRowsAsJSON(sheetName);
-    for (let i = 0; i < all.length; i++) {
-      if (String(all[i].id) === String(id)) {
-        return all[i];
+        return {
+          success: true,
+          message: "Login berhasil.",
+          data: {
+            token: rawToken,
+            user: { id: row[idIdx], name: row[headers.indexOf("name")], role: row[rIdx] }
+          }
+        };
       }
     }
-    return null;
-  },
+  }
+  return { success: false, message: "Kredensial tidak valid.", errorCode: "INVALID_CREDENTIALS" };
+}
 
-  updateRowById: function(sheetName, id, updatedItem) {
-    const sheet = this.getSheet(sheetName);
-    const item = this.findRowById(sheetName, id);
-    if (!item) throw new Error('Data dengan ID ' + id + ' tidak ditemukan.');
+function handleLogout(token) {
+  if (!token) return { success: true, message: "Session telah dibersihkan." };
+  const tokenHash = hashToken(token);
+  const sheet = getSheet("Sessions");
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][2] === tokenHash) {
+      sheet.getRange(i + 1, 7).setValue(new Date().toISOString());
+      break;
+    }
+  }
+  return { success: true, message: "Logout berhasil." };
+}
 
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    const newRow = [];
+function handleCheckSession(token) {
+  const session = validateSessionToken(token);
+  if (!session.valid) return { success: false, message: "Session tidak valid atau kedaluwarsa.", errorCode: "SESSION_EXPIRED" };
+  return { success: true, message: "Session aktif.", data: session.user };
+}
 
-    for (let j = 0; j < headers.length; j++) {
-      const colName = headers[j];
-      if (updatedItem.hasOwnProperty(colName)) {
-        newRow.push(updatedItem[colName]);
-      } else {
-        newRow.push(item[colName]);
+function validateSessionToken(token) {
+  if (!token) return { valid: false };
+  const tokenHash = hashToken(token);
+  const sSheet = getSheet("Sessions");
+  const sData = sSheet.getDataRange().getValues();
+  for (let i = 1; i < sData.length; i++) {
+    if (sData[i][2] === tokenHash && !sData[i][6]) {
+      if (new Date(sData[i][3]) < new Date()) return { valid: false };
+      const userId = sData[i][1];
+      const uSheet = getSheet("Users");
+      const uData = uSheet.getDataRange().getValues();
+      for (let j = 1; j < uData.length; j++) {
+        if (uData[j][0] === userId && !uData[j][uData[0].indexOf("deleted_at")]) {
+          return {
+            valid: true,
+            user: { id: uData[j][0], name: uData[j][1], role: uData[j][6] }
+          };
+        }
       }
     }
-
-    sheet.getRange(item._rowIndex, 1, 1, newRow.length).setValues([newRow]);
-    SpreadsheetApp.flush();
-    return true;
-  },
-
-  deleteRowById: function(sheetName, id) {
-    const sheet = this.getSheet(sheetName);
-    const item = this.findRowById(sheetName, id);
-    if (!item) throw new Error('Data dengan ID ' + id + ' tidak ditemukan.');
-
-    sheet.deleteRow(item._rowIndex);
-    SpreadsheetApp.flush();
-    return true;
   }
-};
+  return { valid: false };
+}
 
-/* ==========================================================================
- * SECTION 10: BUSINESS LOGIC / SERVICES
- * ========================================================================== */
-const ItemService = {
-  list: function(filterParams) {
-    let items = CacheManager.get('items_list');
-    if (!items) {
-      items = SheetAdapter.getAllRowsAsJSON(CONFIG.DEFAULT_SHEET_NAME);
-      CacheManager.put('items_list', items, CONFIG.CACHE_DURATION_SEC);
+function hashPasswordWithSalt(password, salt) {
+  const rawBytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password + salt, Utilities.Charset.UTF_8);
+  return rawBytes.map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, '0')).join('');
+}
+
+function hashToken(token) {
+  const rawBytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, token, Utilities.Charset.UTF_8);
+  return rawBytes.map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, '0')).join('');
+}
+
+// 7. AUTHORIZATION
+function requireRole(sessionUser, allowedRoles = []) {
+  if (!sessionUser || !allowedRoles.includes(sessionUser.role)) {
+    throw new Error("Akses ditolak: role tidak memiliki wewenang.");
+  }
+}
+
+// 8. DATABASE HELPERS
+function getSpreadsheet() {
+  return SPREADSHEET_ID ? SpreadsheetApp.openById(SPREADSHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
+}
+
+function getSheet(name) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(name);
+  if (!sheet) throw new Error(`Sheet '${name}' tidak ditemukan.`);
+  return sheet;
+}
+
+// 9. CACHE HELPERS
+function getFromCache(key) {
+  return CacheService.getScriptCache().get(key);
+}
+
+function putToCache(key, value, sec = 300) {
+  CacheService.getScriptCache().put(key, JSON.stringify(value), sec);
+}
+
+function clearCache(key) {
+  CacheService.getScriptCache().remove(key);
+}
+
+// 12. CRUD HANDLERS WITH PAGINATION & LOCK
+function getItemsList(payload, token) {
+  const page = Math.max(1, parseInt(payload.page) || 1);
+  const limit = Math.max(1, Math.min(100, parseInt(payload.limit) || 10));
+  const search = (payload.search || "").toLowerCase().trim();
+
+  const sheet = getSheet("Items");
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) {
+    return { success: true, message: "Data kosong", data: [], meta: { page: 1, limit, total: 0, totalPages: 0 } };
+  }
+
+  const headers = data[0];
+  const rows = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[headers.indexOf("deleted_at")]) continue;
+    
+    const record = {};
+    headers.forEach((h, idx) => record[h] = row[idx]);
+
+    if (search) {
+      const match = Object.values(record).some(val => String(val).toLowerCase().includes(search));
+      if (!match) continue;
     }
+    rows.push(record);
+  }
 
-    // Filter sederhana
-    if (filterParams && filterParams.status) {
-      items = items.filter(function(x) { return x.status === filterParams.status; });
+  const total = rows.length;
+  const totalPages = Math.ceil(total / limit) || 1;
+  const startIndex = (page - 1) * limit;
+  const paginatedData = rows.slice(startIndex, startIndex + limit);
+
+  return {
+    success: true,
+    message: "Data berhasil dimuat.",
+    data: paginatedData,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrevious: page > 1
     }
-    if (filterParams && filterParams.category) {
-      items = items.filter(function(x) { return x.category === filterParams.category; });
-    }
+  };
+}
 
-    return items;
-  },
+function createItemRecord(payload, token) {
+  const session = validateSessionToken(token);
+  if (!session.valid) throw new Error("Autentikasi diperlukan.");
 
-  getById: function(id) {
-    if (!id) throw new Error('Parameter ID dibutuhkan.');
-    const item = SheetAdapter.findRowById(CONFIG.DEFAULT_SHEET_NAME, id);
-    if (!item) throw new Error('Item tidak ditemukan.');
-    return item;
-  },
-
-  create: function(rawPayload) {
-    const validated = Validator.validateItemPayload(rawPayload);
-    const newId = Utils.generateUUID();
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+    const sheet = getSheet("Items");
+    const id = Utilities.getUuid();
     const now = new Date().toISOString();
 
-    const record = [
-      newId,
-      validated.title,
-      validated.category,
-      validated.content,
-      validated.status,
-      validated.author,
+    const row = [
+      id,
+      sanitizeFormula(payload.name || ""),
+      sanitizeFormula(payload.category || ""),
+      Number(payload.price) || 0,
+      Number(payload.stock) || 0,
       now,
-      now
+      now,
+      session.user.id,
+      session.user.id,
+      "",
+      "active"
     ];
 
-    SheetAdapter.appendRow(CONFIG.DEFAULT_SHEET_NAME, record);
-    CacheManager.invalidate('items_list');
-
-    return {
-      id: newId,
-      title: validated.title,
-      created_at: now
-    };
-  },
-
-  update: function(id, rawPayload) {
-    if (!id) throw new Error('ID target wajib disertakan untuk pembaruan.');
-    const existing = SheetAdapter.findRowById(CONFIG.DEFAULT_SHEET_NAME, id);
-    if (!existing) throw new Error('Data tidak ditemukan.');
-
-    const now = new Date().toISOString();
-    const updateData = {
-      title: rawPayload.title ? Utils.sanitize(rawPayload.title) : existing.title,
-      category: rawPayload.category ? Utils.sanitize(rawPayload.category) : existing.category,
-      content: rawPayload.content !== undefined ? Utils.sanitize(rawPayload.content) : existing.content,
-      status: rawPayload.status ? Utils.sanitize(rawPayload.status) : existing.status,
-      author: rawPayload.author ? Utils.sanitize(rawPayload.author) : existing.author,
-      updated_at: now
-    };
-
-    SheetAdapter.updateRowById(CONFIG.DEFAULT_SHEET_NAME, id, updateData);
-    CacheManager.invalidate('items_list');
-    return { id: id, updated_at: now };
-  },
-
-  remove: function(id) {
-    if (!id) throw new Error('ID target wajib disertakan untuk penghapusan.');
-    SheetAdapter.deleteRowById(CONFIG.DEFAULT_SHEET_NAME, id);
-    CacheManager.invalidate('items_list');
-    return { id: id, deleted: true };
-  },
-
-  getStats: function() {
-    const items = this.list({});
-    return {
-      total: items.length,
-      published: items.filter(function(i) { return i.status === 'Published'; }).length,
-      drafts: items.filter(function(i) { return i.status === 'Draft'; }).length,
-      categories: [...new Set(items.map(function(i) { return i.category; }))]
-    };
+    sheet.appendRow(row);
+    clearCache("dashboard_summary");
+    return { success: true, message: "Item berhasil dibuat.", data: { id } };
+  } finally {
+    lock.releaseLock();
   }
-};
-
-/* ==========================================================================
- * SECTION 11: CACHE MANAGER
- * ========================================================================== */
-const CacheManager = {
-  cache: CacheService.getScriptCache(),
-
-  get: function(key) {
-    try {
-      const data = this.cache.get(key);
-      return data ? JSON.parse(data) : null;
-    } catch (e) {
-      return null;
-    }
-  },
-
-  put: function(key, data, seconds) {
-    try {
-      this.cache.put(key, JSON.stringify(data), seconds || 300);
-    } catch (e) {
-      LoggerService.log('Gagal menyimpan cache: ' + e.message);
-    }
-  },
-
-  invalidate: function(key) {
-    try {
-      this.cache.remove(key);
-    } catch (e) {
-      LoggerService.log('Gagal menghapus cache: ' + e.message);
-    }
-  }
-};
-
-/* ==========================================================================
- * SECTION 12: ERROR LOGGING & MONITORING
- * ========================================================================== */
-const LoggerService = {
-  log: function(msg) {
-    Logger.log('[INFO] ' + msg);
-  },
-
-  error: function(msg, stack) {
-    Logger.log('[ERROR] ' + msg + (stack ? '\nStack: ' + stack : ''));
-  }
-};
-
-/* ==========================================================================
- * SECTION 13: INITIALIZER & SEEDER
- * ========================================================================== */
-function setupDatabase() {
-  LoggerService.log('Menjalankan setup dan inisialisasi database...');
-  const sheet = SheetAdapter.getSheet(CONFIG.DEFAULT_SHEET_NAME);
-
-  // Jika sheet kosong, tuliskan header
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(CONFIG.HEADERS);
-    sheet.getRange(1, 1, 1, CONFIG.HEADERS.length).setFontWeight('bold').setBackground('#E8F0FE');
-    sheet.setFrozenRows(1);
-
-    // Seed data perdana
-    const seedId = Utils.generateUUID();
-    const now = new Date().toISOString();
-    sheet.appendRow([
-      seedId,
-      'Halo Dunia dari GAS!',
-      'Pengumuman',
-      'Ini adalah contoh data awal yang dibuat otomatis saat inisialisasi sheet.',
-      'Published',
-      'Administrator',
-      now,
-      now
-    ]);
-    LoggerService.log('Header dan data seed berhasil ditambahkan.');
-  } else {
-    LoggerService.log('Sheet sudah memiliki struktur.');
-  }
-
-  return 'Database setup selesai. Sheet: ' + sheet.getName();
 }
 
-/* ==========================================================================
- * SECTION 14: UTILITIES & HELPERS
- * ========================================================================== */
-const Utils = {
-  generateUUID: function() {
-    return Utilities.getUuid();
-  },
+function updateItemRecord(payload, token) {
+  const session = validateSessionToken(token);
+  if (!session.valid) throw new Error("Autentikasi diperlukan.");
 
-  sanitize: function(input) {
-    if (typeof input !== 'string') return input;
-    return input
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+    const sheet = getSheet("Items");
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const idIdx = headers.indexOf("id");
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][idIdx] === payload.id && !data[i][headers.indexOf("deleted_at")]) {
+        const rowIndex = i + 1;
+        if (payload.name !== undefined) sheet.getRange(rowIndex, headers.indexOf("name") + 1).setValue(sanitizeFormula(payload.name));
+        if (payload.price !== undefined) sheet.getRange(rowIndex, headers.indexOf("price") + 1).setValue(Number(payload.price) || 0);
+        sheet.getRange(rowIndex, headers.indexOf("updated_at") + 1).setValue(new Date().toISOString());
+        sheet.getRange(rowIndex, headers.indexOf("updated_by") + 1).setValue(session.user.id);
+        
+        clearCache("dashboard_summary");
+        return { success: true, message: "Item berhasil diperbarui." };
+      }
+    }
+    return { success: false, message: "Data tidak ditemukan.", errorCode: "NOT_FOUND" };
+  } finally {
+    lock.releaseLock();
   }
-};
+}
 
-/* ==========================================================================
- * SECTION 15: HEALTH CHECK & TEST SUITE
- * ========================================================================== */
-const HealthCheckService = {
-  run: function() {
-    return {
-      status: 'UP',
-      app: CONFIG.APP_NAME,
-      version: CONFIG.VERSION,
-      timestamp: new Date().toISOString(),
-      spreadsheetConfigured: !!PropertiesManager.getSpreadsheetId()
-    };
+function deleteItemRecord(payload, token) {
+  const session = validateSessionToken(token);
+  if (!session.valid) throw new Error("Autentikasi diperlukan.");
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+    const sheet = getSheet("Items");
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const idIdx = headers.indexOf("id");
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][idIdx] === payload.id) {
+        sheet.getRange(i + 1, headers.indexOf("deleted_at") + 1).setValue(new Date().toISOString());
+        clearCache("dashboard_summary");
+        return { success: true, message: "Item berhasil dihapus (soft-delete)." };
+      }
+    }
+    return { success: false, message: "Data tidak ditemukan.", errorCode: "NOT_FOUND" };
+  } finally {
+    lock.releaseLock();
   }
-};
+}
 
-function runTestSuite() {
-  LoggerService.log('Memulai pengujian backend...');
-  const health = HealthCheckService.run();
-  LoggerService.log('HealthCheck: ' + JSON.stringify(health));
+// 15. SETUPDATABASE (Idempotent)
+function SETUPDATABASE() {
+  const ss = getSpreadsheet();
+  
+  const tables = {
+    Users: ["id", "name", "username", "password_hash", "password_salt", "role", "status", "created_at", "updated_at", "deleted_at"],
+    Sessions: ["id", "user_id", "token_hash", "expired_at", "last_activity_at", "created_at", "revoked_at", "user_agent"],
+    Items: ["id", "name", "category", "price", "stock", "created_at", "updated_at", "created_by", "updated_by", "deleted_at", "status"]
+  };
 
-  const stats = ItemService.getStats();
-  LoggerService.log('Current Stats: ' + JSON.stringify(stats));
+  Object.keys(tables).forEach(tName => {
+    let sheet = ss.getSheetByName(tName);
+    if (!sheet) sheet = ss.insertSheet(tName);
 
-  return 'Pengujian selesai tanpa kesalahan fatal.';
+    const headers = tables[tName];
+    if (sheet.getLastRow() === 0) {
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      sheet.setFrozenRows(1);
+    }
+  });
+
+  // Admin Awal (admin / admin123)
+  const uSheet = ss.getSheetByName("Users");
+  if (uSheet.getLastRow() <= 1) {
+    const salt = Utilities.getUuid();
+    const hash = hashPasswordWithSalt("admin123", salt);
+    uSheet.appendRow([
+      Utilities.getUuid(),
+      "Administrator",
+      "admin",
+      hash,
+      salt,
+      "admin",
+      "active",
+      new Date().toISOString(),
+      new Date().toISOString(),
+      ""
+    ]);
+  }
+  Logger.log("SETUPDATABASE selesai: Seluruh tabel dan skema berhasil disiapkan.");
 }
