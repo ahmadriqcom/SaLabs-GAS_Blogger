@@ -1,885 +1,305 @@
 <!DOCTYPE html>
 <html lang="id">
-<!-- ====================================================================
-     1. HEAD & BLOGGER METADATA
-     ==================================================================== -->
 <head>
+  <!-- 1. HEAD -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aplikasi Web Blogger & Apps Script</title>
+  <title>Aplikasi Web Decoupled</title>
 
-  <!-- ==================================================================
-       9. EXTERNAL LIBRARIES (Hanya Lucide Icons)
-       ================================================================== -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <!-- ==================================================================
-       2. CSS VARIABLES & 3. GLOBAL STYLES (Pure CSS, Blogger Safe)
-       ================================================================== -->
+  <!-- 2. CSS VARIABLES & 3. GLOBAL STYLES -->
   <style>
     :root {
-      --primary: #2563eb;
-      --primary-hover: #1d4ed8;
-      --primary-light: #eff6ff;
-      --text-main: #0f172a;
+      --primary: #1e3a8a;
+      --primary-hover: #172554;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
       --text-muted: #64748b;
-      --bg-surface: #ffffff;
-      --bg-app: #f8fafc;
-      --border-color: #e2e8f0;
-      --success: #16a34a;
       --danger: #dc2626;
-      --warning: #d97706;
-      --radius-sm: 6px;
-      --radius-md: 10px;
-      --radius-lg: 16px;
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-      --font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --success: #16a34a;
+      --radius: 8px;
     }
 
-    #gas-blogger-app {
-      font-family: var(--font-family);
-      color: var(--text-main);
-      background-color: var(--bg-app);
-      min-height: 100vh;
-      padding: 1.5rem 1rem;
-      box-sizing: border-box;
-      line-height: 1.5;
-    }
-
-    #gas-blogger-app * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    .app-container {
-      max-width: 1040px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-    }
-
-    .card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      padding: 1.25rem;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      padding: 0.6rem 1rem;
-      font-size: 0.875rem;
-      font-weight: 500;
-      border-radius: var(--radius-md);
-      border: 1px solid transparent;
-      cursor: pointer;
-      transition: all 0.15s ease-in-out;
-      text-decoration: none;
-    }
-
-    .btn-primary {
-      background-color: var(--primary);
-      color: #ffffff;
-    }
-    .btn-primary:hover {
-      background-color: var(--primary-hover);
-    }
-
-    .btn-secondary {
-      background-color: #ffffff;
-      color: var(--text-main);
-      border-color: var(--border-color);
-    }
-    .btn-secondary:hover {
-      background-color: #f1f5f9;
-    }
-
-    .btn-danger {
-      background-color: var(--danger);
-      color: #ffffff;
-    }
-    .btn-danger:hover {
-      background-color: #b91c1c;
-    }
-
-    .btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .input-control {
-      width: 100%;
-      padding: 0.625rem 0.875rem;
-      font-size: 0.875rem;
-      color: var(--text-main);
-      background-color: #ffffff;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      outline: none;
-      transition: border-color 0.15s ease;
-    }
-    .input-control:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-    }
-
-    .label-text {
-      display: block;
-      font-size: 0.8125rem;
-      font-weight: 600;
-      color: #334155;
-      margin-bottom: 0.375rem;
-    }
-
-    /* Table Styles */
-    .table-responsive {
-      overflow-x: auto;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      background: #ffffff;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-      font-size: 0.875rem;
-    }
-
-    thead th {
-      background-color: #f8fafc;
-      padding: 0.75rem 1rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    tbody td {
-      padding: 0.875rem 1rem;
-      border-bottom: 1px solid var(--border-color);
-      color: #334155;
-    }
-
-    tbody tr:last-child td {
-      border-bottom: none;
-    }
-    tbody tr:hover {
-      background-color: #f8fafc;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 0.2rem 0.6rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-      border-radius: 9999px;
-    }
-    .badge-success { background: #dcfce7; color: #15803d; }
-    .badge-neutral { background: #f1f5f9; color: #475569; }
-
-    /* Modal Backdrop */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.5);
-      backdrop-filter: blur(2px);
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
-    .modal-box {
-      background: #ffffff;
-      border-radius: var(--radius-lg);
-      width: 100%;
-      max-width: 500px;
-      box-shadow: var(--shadow-lg);
-      overflow: hidden;
-      animation: modalFade 0.2s ease-out;
-    }
-    @keyframes modalFade {
-      from { opacity: 0; transform: translateY(-8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Toast */
-    #toast-container {
-      position: fixed;
-      bottom: 1.5rem;
-      right: 1.5rem;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      max-width: 360px;
-    }
-    .toast-item {
-      padding: 0.875rem 1.25rem;
-      border-radius: var(--radius-md);
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #ffffff;
-      box-shadow: var(--shadow-md);
-      animation: modalFade 0.2s ease-out;
-    }
-    .toast-success { background-color: var(--success); }
-    .toast-error { background-color: var(--danger); }
-    .toast-info { background-color: #1e293b; }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 1.5rem; line-height: 1.5; }
+    
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6rem 1.2rem; border-radius: var(--radius); font-weight: 500; cursor: pointer; border: none; background: var(--primary); color: #fff; }
+    .btn:hover { background: var(--primary-hover); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-danger { background: var(--danger); }
+    
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 500; font-size: 0.9rem; }
+    .form-input { width: 100%; padding: 0.6rem 0.8rem; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.95rem; }
+    
+    .table-container { width: 100%; overflow-x: auto; margin-top: 1rem; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
+    th { background: #f1f5f9; font-weight: 600; }
+    
+    .pagination { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; }
+    .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
+    .toast { background: var(--surface); border-left: 4px solid var(--primary); padding: 0.8rem 1.2rem; border-radius: 4px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .toast.success { border-left-color: var(--success); }
+    .toast.error { border-left-color: var(--danger); }
+    
     .hidden { display: none !important; }
   </style>
 </head>
 <body>
 
-<div id="gas-blogger-app">
-
-  <!-- ==================================================================
-       4. LOGIN VIEW
-       ================================================================== -->
-  <div id="login-view" class="hidden" style="max-width: 400px; margin: 5rem auto;">
-    <div class="card" style="text-align: center; padding: 2rem 1.5rem;">
-      <div style="width: 48px; height: 48px; background: var(--primary-light); color: var(--primary); border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
-        <i data-lucide="lock" style="width: 24px; height: 24px;"></i>
+  <!-- 4. LOGIN VIEW -->
+  <div id="login-section" class="card" style="max-width: 400px; margin: 4rem auto;">
+    <h2>Masuk ke Akun</h2>
+    <form id="login-form" style="margin-top: 1rem;">
+      <div class="form-group">
+        <label for="login-username">Username</label>
+        <input type="text" id="login-username" class="form-input" required />
       </div>
-      <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.35rem;">Masuk ke Portal</h2>
-      <p style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 1.5rem;">Gunakan kredensial terdaftar untuk mengakses aplikasi</p>
-
-      <form id="login-form" style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
-        <div>
-          <label class="label-text" for="login-username">Username</label>
-          <input type="text" id="login-username" class="input-control" placeholder="admin" required autocomplete="username">
-        </div>
-        <div>
-          <label class="label-text" for="login-password">Password</label>
-          <input type="password" id="login-password" class="input-control" placeholder="••••••••" required autocomplete="current-password">
-        </div>
-        <button type="submit" id="btn-login-submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
-          <span>Masuk</span>
-        </button>
-      </form>
-    </div>
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" class="form-input" required />
+      </div>
+      <button type="submit" id="btn-login" class="btn" style="width: 100%;">Masuk</button>
+    </form>
   </div>
 
-  <!-- ==================================================================
-       5. APPLICATION SHELL
-       ================================================================== -->
-  <div id="app-shell" class="app-container hidden">
+  <!-- 5. APPLICATION SHELL & 6. PAGE COMPONENTS -->
+  <div id="app-shell" class="hidden">
+    <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h2 id="app-heading">Manajemen Data</h2>
+        <p id="user-greeting" style="font-size: 0.85rem; color: var(--text-muted);"></p>
+      </div>
+      <button id="btn-logout" class="btn btn-danger">Keluar</button>
+    </div>
 
-    <!-- Topbar Header -->
-    <header class="card" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-      <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <div style="width: 40px; height: 40px; background: var(--primary); color: #fff; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;">
-          <i data-lucide="package" style="width: 20px; height: 20px;"></i>
-        </div>
-        <div>
-          <h1 style="font-size: 1.125rem; font-weight: 700;">Katalog Produk & Item</h1>
-          <p style="font-size: 0.75rem; color: var(--text-muted);">Sistem Sinkronisasi Apps Script & Spreadsheet</p>
-        </div>
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+        <input type="text" id="search-input" class="form-input" placeholder="Cari nama item..." style="max-width: 300px;" />
+        <button id="btn-open-create" class="btn">+ Tambah Item</button>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <div style="text-align: right;">
-          <p id="user-display-name" style="font-size: 0.875rem; font-weight: 600;">-</p>
-          <span id="user-display-role" class="badge badge-neutral">-</span>
-        </div>
-        <button id="btn-logout" class="btn btn-secondary" title="Keluar">
-          <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
-          <span>Keluar</span>
-        </button>
-      </div>
-    </header>
-
-    <!-- ================================================================
-         6. PAGE COMPONENTS: Action Bar & Search
-         ================================================================ -->
-    <section class="card" style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
-      <div style="position: relative; flex: 1; min-width: 240px;">
-        <input type="text" id="search-input" class="input-control" placeholder="Cari nama atau kategori..." style="padding-left: 2.25rem;">
-        <i data-lucide="search" style="position: absolute; left: 0.75rem; top: 0.75rem; width: 16px; height: 16px; color: var(--text-muted);"></i>
-      </div>
-
-      <div style="display: flex; gap: 0.5rem;">
-        <button id="btn-refresh-data" class="btn btn-secondary" title="Refresh Data">
-          <i data-lucide="rotate-cw" style="width: 16px; height: 16px;"></i>
-        </button>
-        <button id="btn-open-create-modal" class="btn btn-primary">
-          <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-          <span>Tambah Item</span>
-        </button>
-      </div>
-    </section>
-
-    <!-- Data Table & States -->
-    <section class="card" style="padding: 0; overflow: hidden;">
-      <div id="loading-state" style="padding: 3rem; text-align: center; color: var(--text-muted);" class="hidden">
-        <i data-lucide="loader-2" style="width: 32px; height: 32px; animation: spin 1s linear infinite; margin: 0 auto 0.75rem auto;"></i>
-        <p style="font-size: 0.875rem;">Memuat data dari Google Spreadsheet...</p>
-      </div>
-
-      <div id="empty-state" style="padding: 3.5rem; text-align: center; color: var(--text-muted);" class="hidden">
-        <i data-lucide="inbox" style="width: 40px; height: 40px; margin: 0 auto 0.5rem auto; opacity: 0.5;"></i>
-        <h3 style="font-size: 1rem; font-weight: 600; color: var(--text-main);">Belum ada data</h3>
-        <p style="font-size: 0.8125rem;">Klik tombol "Tambah Item" untuk menambahkan data baru.</p>
-      </div>
-
-      <div id="table-container" class="table-responsive">
+      <div class="table-container">
         <table>
           <thead>
             <tr>
-              <th>Nama Item</th>
+              <th>Nama</th>
               <th>Kategori</th>
-              <th>Harga (Rp)</th>
+              <th>Harga</th>
               <th>Stok</th>
-              <th>Waktu Diperbarui</th>
-              <th style="text-align: right;">Aksi</th>
+              <th>Aksi</th>
             </tr>
           </thead>
-          <tbody id="items-tbody"></tbody>
+          <tbody id="table-body">
+            <!-- Dynamic Content -->
+          </tbody>
         </table>
       </div>
 
-      <!-- Pagination Controls -->
-      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.875rem 1.25rem; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
-        <p id="pagination-info" style="font-size: 0.8125rem; color: var(--text-muted);">Menampilkan 0 dari 0 data</p>
-        <div style="display: flex; gap: 0.5rem;">
-          <button id="btn-prev-page" class="btn btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.8125rem;" disabled>
-            <i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i>
-            <span>Sebelumnya</span>
-          </button>
-          <button id="btn-next-page" class="btn btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.8125rem;" disabled>
-            <span>Berikutnya</span>
-            <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
-          </button>
-        </div>
-      </div>
-    </section>
-
-  </div>
-
-  <!-- ==================================================================
-       7. MODALS: Form Modal & Confirm Delete Modal
-       ================================================================== -->
-  <!-- Create / Edit Modal -->
-  <div id="item-modal" class="modal-overlay hidden">
-    <div class="modal-box">
-      <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.25rem; border-bottom: 1px solid var(--border-color);">
-        <h3 id="modal-title" style="font-size: 1.0625rem; font-weight: 700;">Tambah Item Baru</h3>
-        <button id="btn-close-modal" style="background: none; border: none; cursor: pointer; color: var(--text-muted);">
-          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
-        </button>
-      </div>
-
-      <form id="item-form" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
-        <input type="hidden" id="form-item-id">
-        <div>
-          <label class="label-text" for="form-name">Nama Item *</label>
-          <input type="text" id="form-name" class="input-control" placeholder="Contoh: Kertas A4" required>
-        </div>
-        <div>
-          <label class="label-text" for="form-category">Kategori</label>
-          <input type="text" id="form-category" class="input-control" placeholder="Contoh: ATK">
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-          <div>
-            <label class="label-text" for="form-price">Harga (Rp)</label>
-            <input type="number" id="form-price" class="input-control" placeholder="0" min="0">
-          </div>
-          <div>
-            <label class="label-text" for="form-stock">Stok</label>
-            <input type="number" id="form-stock" class="input-control" placeholder="0" min="0">
-          </div>
-        </div>
-
-        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
-          <button type="button" id="btn-cancel-modal" class="btn btn-secondary">Batal</button>
-          <button type="submit" id="btn-save-item" class="btn btn-primary">Simpan</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Confirm Delete Modal -->
-  <div id="delete-modal" class="modal-overlay hidden">
-    <div class="modal-box" style="max-width: 400px; padding: 1.5rem; text-align: center;">
-      <div style="width: 48px; height: 48px; background: #fee2e2; color: var(--danger); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.75rem;">
-        <i data-lucide="alert-triangle" style="width: 24px; height: 24px;"></i>
-      </div>
-      <h3 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem;">Konfirmasi Hapus</h3>
-      <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.25rem;">Apakah Anda yakin ingin menghapus data ini? Data yang dihapus tidak akan ditampilkan lagi.</p>
-      <div style="display: flex; justify-content: center; gap: 0.5rem;">
-        <button id="btn-cancel-delete" class="btn btn-secondary">Batal</button>
-        <button id="btn-confirm-delete" class="btn btn-danger">Ya, Hapus</button>
+      <div class="pagination">
+        <button id="btn-prev" class="btn" disabled>Sebelumnya</button>
+        <span id="page-info" style="font-size: 0.9rem;">Halaman 1 dari 1</span>
+        <button id="btn-next" class="btn" disabled>Selanjutnya</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================================================================
-       8. TOAST CONTAINER
-       ================================================================== -->
-  <div id="toast-container"></div>
+  <!-- 8. TOAST CONTAINER -->
+  <div id="toast-container" class="toast-container"></div>
 
-</div>
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // 10. CONFIGURATION
+    const API_URL = 'ISI_URL_WEB_APP_DI_SINI'; // Wajib deployment /exec
 
-<!-- JAVASCRIPT LOGIC -->
-<script>
-  /* ====================================================================
-     10. CONFIGURATION
-     ==================================================================== */
-  const API_URL = 'ISI_URL_WEB_APP_DI_SINI'; // Ganti dengan URL /exec Web App GAS Anda
+    // 11. GLOBAL STATE
+    const AppState = {
+      token: sessionStorage.getItem('token') || null,
+      user: null,
+      currentPage: 1,
+      pageSize: 10,
+      totalPages: 1,
+      search: ''
+    };
 
-  /* ====================================================================
-     11. GLOBAL STATE
-     ==================================================================== */
-  const AppState = {
-    user: null,
-    token: null,
-    currentPage: 1,
-    pageSize: 10,
-    totalPages: 1,
-    search: '',
-    totalRecords: 0,
-    pendingDeleteId: null
-  };
+    // 12. API CLIENT (Centralized)
+    async function apiRequest(action, payload = {}, options = {}) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), options.timeout || 30000);
 
-  /* ====================================================================
-     13. CACHE HELPERS (LocalCache)
-     ==================================================================== */
-  const LocalCache = {
-    set(key, data, ttlMinutes = 15) {
-      const item = { value: data, expiry: Date.now() + ttlMinutes * 60000 };
-      localStorage.setItem(key, JSON.stringify(item));
-    },
-    get(key) {
       try {
-        const raw = localStorage.getItem(key);
-        if (!raw) return null;
-        const item = JSON.parse(raw);
-        if (!item || Date.now() > item.expiry) {
-          localStorage.removeItem(key);
-          return null;
-        }
-        return item.value;
-      } catch (e) {
-        localStorage.removeItem(key);
-        return null;
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action, payload, token: AppState.token }),
+          signal: controller.signal
+        });
+
+        if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+        const result = await response.json();
+        if (!result || result.success !== true) throw new Error(result?.message || 'Permintaan gagal.');
+        return result;
+      } catch (err) {
+        if (err.name === 'AbortError') throw new Error('Permintaan kehabisan waktu.');
+        throw err;
+      } finally {
+        clearTimeout(timeout);
       }
-    },
-    remove(key) {
-      localStorage.removeItem(key);
-    },
-    clearByPrefix(prefix) {
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith(prefix)) localStorage.removeItem(key);
-      });
-    }
-  };
-
-  /* ====================================================================
-     14. AUTH HELPERS
-     ==================================================================== */
-  function getSessionToken() {
-    return sessionStorage.getItem('SESSION_TOKEN') || AppState.token;
-  }
-
-  function setSessionToken(token) {
-    AppState.token = token;
-    if (token) {
-      sessionStorage.setItem('SESSION_TOKEN', token);
-    } else {
-      sessionStorage.removeItem('SESSION_TOKEN');
-    }
-  }
-
-  /* ====================================================================
-     12. API CLIENT (fetch dengan redirect: 'follow' dan text/plain)
-     ==================================================================== */
-  async function apiRequest(action, payload = {}, options = {}) {
-    if (!API_URL || API_URL === 'ISI_URL_WEB_APP_DI_SINI') {
-      throw new Error("Konfigurasi API_URL belum diatur. Tempelkan URL /exec Google Apps Script!");
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), options.timeout || 30000);
+    // 15. UI HELPERS
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }
 
-    try {
-      const requestBody = {
-        action,
-        payload,
-        token: getSessionToken()
+    function setBtnLoading(btn, isLoading, defaultText = 'Submit') {
+      btn.disabled = isLoading;
+      btn.textContent = isLoading ? 'Memproses...' : defaultText;
+    }
+
+    function debounce(func, delay = 400) {
+      let timeout;
+      return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), delay);
       };
-
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        redirect: 'follow',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
-        },
-        body: JSON.stringify(requestBody),
-        signal: controller.signal
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP Error ${response.status}`);
-      }
-
-      const result = await response.json();
-      if (!result || result.success !== true) {
-        throw new Error(result?.message || 'Permintaan gagal diproses.');
-      }
-      return result;
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        throw new Error('Permintaan terlalu lama (timeout). Silakan coba lagi.');
-      }
-      throw error;
-    } finally {
-      clearTimeout(timeout);
     }
-  }
 
-  /* ====================================================================
-     15. UI HELPERS (Toast, DateTime Formatter, Debounce)
-     ==================================================================== */
-  function showToast(message, type = 'info') {
-    const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = `toast-item toast-${type}`;
-    toast.textContent = message;
-    container.appendChild(toast);
+    // 16. PAGE RENDERERS
+    async function loadTableData() {
+      const tbody = document.getElementById('table-body');
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Memuat data...</td></tr>';
 
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transition = 'opacity 0.3s ease';
-      setTimeout(() => toast.remove(), 300);
-    }, 3500);
-  }
+      try {
+        const res = await apiRequest('getItems', {
+          page: AppState.currentPage,
+          limit: AppState.pageSize,
+          search: AppState.search
+        });
 
-  function formatDateTime(value) {
-    if (!value) return '-';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '-';
-    return new Intl.DateTimeFormat('id-ID', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-      timeZone: 'Asia/Jakarta'
-    }).format(date);
-  }
+        const rows = Array.isArray(res.data) ? res.data : [];
+        if (rows.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada data ditemukan.</td></tr>';
+          return;
+        }
 
-  function debounce(callback, delay = 400) {
-    let timeout;
-    return (...args) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => callback(...args), delay);
-    };
-  }
+        tbody.innerHTML = '';
+        rows.forEach(item => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${item.name || '-'}</td>
+            <td>${item.category || '-'}</td>
+            <td>Rp ${(Number(item.price) || 0).toLocaleString('id-ID')}</td>
+            <td>${item.stock || 0}</td>
+            <td><button class="btn btn-danger" style="padding:0.2rem 0.5rem;font-size:0.8rem;" onclick="deleteRecord('${item.id}')">Hapus</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
 
-  /* ====================================================================
-     16. PAGE RENDERERS
-     ==================================================================== */
-  function renderView(viewName) {
-    const loginView = document.getElementById('login-view');
-    const appShell = document.getElementById('app-shell');
-
-    if (viewName === 'login') {
-      loginView.classList.remove('hidden');
-      appShell.classList.add('hidden');
-    } else {
-      loginView.classList.add('hidden');
-      appShell.classList.remove('hidden');
-      if (AppState.user) {
-        document.getElementById('user-display-name').textContent = AppState.user.name || 'User';
-        document.getElementById('user-display-role').textContent = AppState.user.role || 'Member';
+        AppState.totalPages = res.meta.totalPages || 1;
+        document.getElementById('page-info').textContent = `Halaman ${AppState.currentPage} dari ${AppState.totalPages}`;
+        document.getElementById('btn-prev').disabled = !res.meta.hasPrevious;
+        document.getElementById('btn-next').disabled = !res.meta.hasNext;
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--danger);">${err.message}</td></tr>`;
       }
     }
-    lucide.createIcons();
-  }
 
-  function renderTable(items) {
-    const tbody = document.getElementById('items-tbody');
-    const emptyState = document.getElementById('empty-state');
-    const tableContainer = document.getElementById('table-container');
-
-    tbody.innerHTML = '';
-
-    if (!items || items.length === 0) {
-      tableContainer.classList.add('hidden');
-      emptyState.classList.remove('hidden');
-      return;
-    }
-
-    emptyState.classList.add('hidden');
-    tableContainer.classList.remove('hidden');
-
-    items.forEach(item => {
-      const tr = document.createElement('tr');
-      const formattedPrice = Number(item.price || 0).toLocaleString('id-ID');
-
-      tr.innerHTML = `
-        <td style="font-weight: 600; color: var(--text-main);">${escapeHtml(item.name || '-')}</td>
-        <td><span class="badge badge-neutral">${escapeHtml(item.category || 'Umum')}</span></td>
-        <td>Rp ${formattedPrice}</td>
-        <td>${item.stock || 0}</td>
-        <td style="font-size: 0.75rem; color: var(--text-muted);">${formatDateTime(item.updated_at || item.created_at)}</td>
-        <td style="text-align: right; white-space: nowrap;">
-          <button class="btn btn-secondary btn-edit" data-id="${item.id}" style="padding: 0.35rem 0.6rem; font-size: 0.75rem;">Edit</button>
-          <button class="btn btn-danger btn-delete" data-id="${item.id}" style="padding: 0.35rem 0.6rem; font-size: 0.75rem;">Hapus</button>
-        </td>
-      `;
-
-      tr.querySelector('.btn-edit').addEventListener('click', () => openModal(item));
-      tr.querySelector('.btn-delete').addEventListener('click', () => openDeleteModal(item.id));
-
-      tbody.appendChild(tr);
-    });
-
-    lucide.createIcons();
-  }
-
-  function renderPagination(meta) {
-    AppState.currentPage = meta.page;
-    AppState.totalPages = meta.totalPages || 1;
-    AppState.totalRecords = meta.total || 0;
-
-    const info = document.getElementById('pagination-info');
-    info.textContent = `Halaman ${meta.page} dari ${AppState.totalPages} (Total ${meta.total} item)`;
-
-    document.getElementById('btn-prev-page').disabled = !meta.hasPrevious;
-    document.getElementById('btn-next-page').disabled = !meta.hasNext;
-  }
-
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-
-  /* ====================================================================
-     17. CRUD FUNCTIONS
-     ==================================================================== */
-  async function loadItems() {
-    const loading = document.getElementById('loading-state');
-    loading.classList.remove('hidden');
-
-    try {
-      const res = await apiRequest('getItems', {
-        page: AppState.currentPage,
-        limit: AppState.pageSize,
-        search: AppState.search
-      });
-
-      renderTable(res.data || []);
-      renderPagination(res.meta || { page: 1, limit: 10, total: 0, totalPages: 1 });
-    } catch (error) {
-      showToast(error.message, 'error');
-    } finally {
-      loading.classList.add('hidden');
-    }
-  }
-
-  async function handleSaveItem(e) {
-    e.preventDefault();
-    const saveBtn = document.getElementById('btn-save-item');
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Menyimpan...';
-
-    const id = document.getElementById('form-item-id').value;
-    const payload = {
-      name: document.getElementById('form-name').value.trim(),
-      category: document.getElementById('form-category').value.trim(),
-      price: document.getElementById('form-price').value,
-      stock: document.getElementById('form-stock').value
-    };
-
-    try {
-      if (id) {
-        payload.id = id;
-        await apiRequest('updateItem', payload);
-        showToast('Item berhasil diperbarui.', 'success');
-      } else {
-        await apiRequest('createItem', payload);
-        showToast('Item baru berhasil ditambahkan.', 'success');
+    // 17. CRUD FUNCTIONS
+    async function deleteRecord(id) {
+      if (!confirm('Yakin ingin menghapus item ini?')) return;
+      try {
+        await apiRequest('deleteItem', { id });
+        showToast('Item berhasil dihapus', 'success');
+        loadTableData();
+      } catch (err) {
+        showToast(err.message, 'error');
       }
-
-      closeModal();
-      await loadItems();
-    } catch (error) {
-      showToast(error.message, 'error');
-    } finally {
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Simpan';
     }
-  }
 
-  async function handleConfirmDelete() {
-    if (!AppState.pendingDeleteId) return;
-    const delBtn = document.getElementById('btn-confirm-delete');
-    delBtn.disabled = true;
-
-    try {
-      await apiRequest('deleteItem', { id: AppState.pendingDeleteId });
-      showToast('Item berhasil dihapus.', 'success');
-      closeDeleteModal();
-      await loadItems();
-    } catch (error) {
-      showToast(error.message, 'error');
-    } finally {
-      delBtn.disabled = false;
-    }
-  }
-
-  /* Modal Helpers */
-  function openModal(item = null) {
-    document.getElementById('item-form').reset();
-    const modalTitle = document.getElementById('modal-title');
-    if (item) {
-      modalTitle.textContent = 'Edit Item';
-      document.getElementById('form-item-id').value = item.id;
-      document.getElementById('form-name').value = item.name || '';
-      document.getElementById('form-category').value = item.category || '';
-      document.getElementById('form-price').value = item.price || 0;
-      document.getElementById('form-stock').value = item.stock || 0;
-    } else {
-      modalTitle.textContent = 'Tambah Item Baru';
-      document.getElementById('form-item-id').value = '';
-    }
-    document.getElementById('item-modal').classList.remove('hidden');
-  }
-
-  function closeModal() {
-    document.getElementById('item-modal').classList.add('hidden');
-  }
-
-  function openDeleteModal(id) {
-    AppState.pendingDeleteId = id;
-    document.getElementById('delete-modal').classList.remove('hidden');
-  }
-
-  function closeDeleteModal() {
-    AppState.pendingDeleteId = null;
-    document.getElementById('delete-modal').classList.add('hidden');
-  }
-
-  /* ====================================================================
-     18. EVENT LISTENERS
-     ==================================================================== */
-  function setupEventListeners() {
-    // Login Form Submit
+    // 18. EVENT LISTENERS
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const btn = document.getElementById('btn-login-submit');
-      btn.disabled = true;
-      btn.textContent = 'Memeriksa...';
-
-      const username = document.getElementById('login-username').value.trim();
-      const password = document.getElementById('login-password').value;
+      const btn = document.getElementById('btn-login');
+      const u = document.getElementById('login-username').value;
+      const p = document.getElementById('login-password').value;
 
       try {
-        const res = await apiRequest('login', { username, password });
-        setSessionToken(res.data.token);
+        setBtnLoading(btn, true);
+        const res = await apiRequest('login', { username: u, password: p });
+        AppState.token = res.data.token;
         AppState.user = res.data.user;
-        showToast('Login berhasil!', 'success');
-        renderView('app');
-        await loadItems();
+        sessionStorage.setItem('token', AppState.token);
+        
+        initAppView();
       } catch (err) {
         showToast(err.message, 'error');
       } finally {
-        btn.disabled = false;
-        btn.textContent = 'Masuk';
+        setBtnLoading(btn, false, 'Masuk');
       }
     });
 
-    // Logout Button
     document.getElementById('btn-logout').addEventListener('click', async () => {
       try {
-        await apiRequest('logout').catch(() => null);
+        await apiRequest('logout');
       } finally {
-        setSessionToken(null);
+        sessionStorage.removeItem('token');
+        AppState.token = null;
         AppState.user = null;
-        showToast('Anda telah logout.', 'info');
-        renderView('login');
+        document.getElementById('app-shell').classList.add('hidden');
+        document.getElementById('login-section').classList.remove('hidden');
       }
     });
 
-    // Modal Events
-    document.getElementById('btn-open-create-modal').addEventListener('click', () => openModal());
-    document.getElementById('btn-close-modal').addEventListener('click', closeModal);
-    document.getElementById('btn-cancel-modal').addEventListener('click', closeModal);
-    document.getElementById('item-form').addEventListener('submit', handleSaveItem);
-
-    document.getElementById('btn-cancel-delete').addEventListener('click', closeDeleteModal);
-    document.getElementById('btn-confirm-delete').addEventListener('click', handleConfirmDelete);
-
-    // Refresh & Search Events
-    document.getElementById('btn-refresh-data').addEventListener('click', () => loadItems());
     document.getElementById('search-input').addEventListener('input', debounce((e) => {
-      AppState.search = e.target.value.trim();
+      AppState.search = e.target.value;
       AppState.currentPage = 1;
-      loadItems();
-    }, 400));
+      loadTableData();
+    }));
 
-    // Pagination Click
-    document.getElementById('btn-prev-page').addEventListener('click', () => {
+    document.getElementById('btn-prev').addEventListener('click', () => {
       if (AppState.currentPage > 1) {
         AppState.currentPage--;
-        loadItems();
+        loadTableData();
       }
     });
 
-    document.getElementById('btn-next-page').addEventListener('click', () => {
+    document.getElementById('btn-next').addEventListener('click', () => {
       if (AppState.currentPage < AppState.totalPages) {
         AppState.currentPage++;
-        loadItems();
+        loadTableData();
       }
     });
 
-    // Keyboard Escape to close modal
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        closeModal();
-        closeDeleteModal();
-      }
-    });
-  }
-
-  /* ====================================================================
-     19. APPLICATION INITIALIZATION
-     ==================================================================== */
-  async function initApp() {
-    setupEventListeners();
-    lucide.createIcons();
-
-    const token = getSessionToken();
-    if (token) {
-      try {
-        const res = await apiRequest('checkSession');
-        AppState.user = res.data;
-        renderView('app');
-        await loadItems();
-        return;
-      } catch (err) {
-        setSessionToken(null);
-      }
+    // 19. APPLICATION INITIALIZATION
+    function initAppView() {
+      document.getElementById('login-section').classList.add('hidden');
+      document.getElementById('app-shell').classList.remove('hidden');
+      document.getElementById('user-greeting').textContent = `Login sebagai: ${AppState.user?.name || 'User'} (${AppState.user?.role || 'Staff'})`;
+      loadTableData();
     }
-    renderView('login');
-  }
 
-  document.addEventListener('DOMContentLoaded', initApp);
-</script>
+    window.addEventListener('DOMContentLoaded', async () => {
+      if (AppState.token) {
+        try {
+          const res = await apiRequest('checkSession');
+          AppState.user = res.data;
+          initAppView();
+        } catch {
+          sessionStorage.removeItem('token');
+          AppState.token = null;
+        }
+      }
+    });
+  </script>
 </body>
 </html>
