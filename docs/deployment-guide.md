@@ -9,8 +9,6 @@ Ikuti urutan langkah berikut untuk memasang aplikasi dari repositori ini.
 2. Salin **Spreadsheet ID** dari URL browser:
    `https://docs.google.com/spreadsheets/d/[SPREADSHEET_ID_INI]/edit`
 
----
-
 ## 2. Setup Google Apps Script (Backend)
 1. Buka [script.google.com](https://script.google.com) dan buat project baru.
 2. Buka menu **Project Settings** (ikon roda gigi di kiri).
@@ -22,8 +20,6 @@ Ikuti urutan langkah berikut untuk memasang aplikasi dari repositori ini.
 6. Setujui izin akun Google (*Review permissions* > *Advanced* > *Go to (unsafe)*).
 7. Periksa Spreadsheet Anda: Sheet `Users`, `Sessions`, dan `Items` akan terbentuk secara otomatis beserta akun admin awal (`admin` / `admin123`).
 
----
-
 ## 3. Deployment Web App API
 1. Klik tombol **Deploy** di kanan atas > **New deployment**.
 2. Klik ikon roda gigi di sebelah kanan *Select type*, pilih **Web app**.
@@ -33,8 +29,6 @@ Ikuti urutan langkah berikut untuk memasang aplikasi dari repositori ini.
    - **Who has access**: `Anyone` *(Wajib Anyone agar frontend Blogger dapat mengakses API via fetch)*.
 4. Klik **Deploy**, lalu salin **Web app URL** yang berakhiran `/exec`.
 
----
-
 ## 4. Setup Blogger (Frontend)
 1. Buka file `templates/Index.html` pada teks editor.
 2. Cari konstanta `API_URL` di Bagian 10:
@@ -42,7 +36,9 @@ Ikuti urutan langkah berikut untuk memasang aplikasi dari repositori ini.
    const API_URL = 'https://script.google.com/macros/s/.../exec';
    ```
    Ganti nilai string tersebut dengan URL `/exec` yang baru Anda dapatkan.
-3. Masuk ke dashboard Blogger Anda > menu **Pages (Halaman)** > **New Page (Halaman Baru)**.
-4. Ubah mode penulisan dari **Compose View** menjadi **HTML View**.
-5. Tempel seluruh isi file `templates/Index.html` ke editor halaman Blogger.
-6. Publikasikan halaman dan buka URL publiknya.
+3. Masuk ke dashboard Blogger Anda > menu Pages (Halaman) di sidebar kiri > klik + New Page (+ Halaman Baru).
+4. Beri judul halaman (misalnya: Katalog Data).
+5. Klik ikon pensil di bawah judul > alihkan ke mode HTML view (Tampilan HTML).
+6. Hapus seluruh tag bawaan, lalu tempel seluruh isi file `templates/Index.html` ke editor Blogger tersebut.
+7. Klik tombol Publish (Publikasikan).
+8. Klik ikon mata (View) pada halaman tersebut untuk mulai menggunakan aplikasi secara langsung.
