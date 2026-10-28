@@ -1,0 +1,655 @@
+<!--
+  ============================================================================
+  GAS-BLOGGER GENERATOR: FRONTEND STARTER BOILERPLATE (19 SECTIONS)
+  ============================================================================
+  Deskripsi: Single Page Application (SPA) / Widget Mandiri yang siap ditempel
+             langsung pada Halaman Statis Blogger (HTML View) atau di-host mandiri.
+  Kompatibilitas: Tidak merusak tema Blogger (Scoped Reset), mendukung CORS & Redirect GAS.
+  ============================================================================
+-->
+
+<!-- ==========================================================================
+     SECTION 1: METADATA & BLOGGER COMPATIBILITY
+     ========================================================================== -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAS Blogger Application Portal</title>
+
+<!-- ==========================================================================
+     SECTION 2: CDN ASSETS & FONTS
+     ========================================================================== -->
+<!-- Tailwind CSS via CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Google Fonts: Inter -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<!-- ==========================================================================
+     SECTION 3: SCOPED CSS & RESETS (Mencegah Tabrakan Tema Blogger)
+     ========================================================================== -->
+<style>
+  /* Isolasi Gaya agar tidak dirusak oleh CSS Template Blogspot */
+  #gas-blogger-app {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #1e293b;
+    background-color: #f8fafc;
+    min-height: 100vh;
+    padding: 1.5rem;
+    box-sizing: border-box;
+  }
+  #gas-blogger-app * {
+    box-sizing: border-box;
+  }
+  /* Custom scrollbar */
+  #gas-blogger-app ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  #gas-blogger-app ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  /* Animasi halus modal & toast */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.25s ease-out forwards;
+  }
+</style>
+
+<!-- MAIN APP CONTAINER -->
+<div id="gas-blogger-app">
+  <div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- ==========================================================================
+         SECTION 7: TOPBAR / HEADER NAVIGATION
+         ========================================================================== -->
+    <header class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-blue-200">
+          <i data-lucide="layers" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-800 leading-tight">SaLabs Portal</h1>
+          <p class="text-xs text-slate-500">Google Apps Script × Blogger Cloud Engine</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+        <div id="connection-pill" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+          <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+          <span>Menghubungkan...</span>
+        </div>
+        <button id="btn-refresh" class="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-xl transition-colors" title="Muat Ulang Data">
+          <i data-lucide="rotate-cw" class="w-5 h-5"></i>
+        </button>
+        <button id="btn-open-create-modal" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-md shadow-blue-200">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Tambah Data</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ==========================================================================
+         SECTION 8: HERO & STATUS INDICATOR
+         ========================================================================== -->
+    <section class="bg-gradient-to-br from-blue-700 to-indigo-800 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+      <div class="relative z-10 max-w-2xl space-y-2">
+        <span class="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-medium inline-block backdrop-blur-sm">Serverless Architecture</span>
+        <h2 class="text-2xl font-bold tracking-tight">Manajemen Konten & Data Terintegrasi</h2>
+        <p class="text-sm text-blue-100">Solusi webapp cepat tanpa hosting berbayar. Tersinkronisasi otomatis dengan Google Spreadsheet melalui Web App REST API.</p>
+      </div>
+      <div class="absolute -right-8 -bottom-8 opacity-10 text-white pointer-events-none">
+        <i data-lucide="database" class="w-48 h-48"></i>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         SECTION 12: KPI & METRICS WIDGET
+         ========================================================================== -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <p class="text-xs text-slate-500 font-medium">Total Data</p>
+        <p id="kpi-total" class="text-2xl font-bold text-slate-800 mt-1">-</p>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <p class="text-xs text-slate-500 font-medium">Published</p>
+        <p id="kpi-published" class="text-2xl font-bold text-emerald-600 mt-1">-</p>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <p class="text-xs text-slate-500 font-medium">Drafts</p>
+        <p id="kpi-drafts" class="text-2xl font-bold text-amber-600 mt-1">-</p>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <p class="text-xs text-slate-500 font-medium">Kategori Aktif</p>
+        <p id="kpi-categories" class="text-2xl font-bold text-indigo-600 mt-1">-</p>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         SECTION 11: SEARCH & FILTER CONTROLS
+         ========================================================================== -->
+    <section class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="relative w-full sm:w-80">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-slate-400"></i>
+        <input type="text" id="search-input" placeholder="Cari judul atau isi data..." class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+      <div class="flex items-center gap-2 w-full sm:w-auto">
+        <select id="filter-status" class="w-full sm:w-auto border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Semua Status</option>
+          <option value="Published">Published</option>
+          <option value="Draft">Draft</option>
+        </select>
+        <select id="filter-category" class="w-full sm:w-auto border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Semua Kategori</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         SECTION 9: DATA TABLE & CARD GRID VIEW
+         ========================================================================== -->
+    <section class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <!-- Loading Skeleton -->
+      <div id="loading-state" class="p-8 space-y-4">
+        <div class="h-6 bg-slate-200 rounded-lg animate-pulse w-1/3"></div>
+        <div class="h-12 bg-slate-100 rounded-lg animate-pulse"></div>
+        <div class="h-12 bg-slate-100 rounded-lg animate-pulse"></div>
+        <div class="h-12 bg-slate-100 rounded-lg animate-pulse"></div>
+      </div>
+
+      <!-- ==========================================================================
+           SECTION 13: EMPTY & ERROR STATES
+           ========================================================================== -->
+      <div id="empty-state" class="hidden p-12 text-center space-y-3">
+        <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+          <i data-lucide="inbox" class="w-6 h-6"></i>
+        </div>
+        <h3 class="font-bold text-slate-700">Belum ada data tersedia</h3>
+        <p class="text-xs text-slate-500 max-w-sm mx-auto">Data Anda di Google Sheets masih kosong. Klik tombol "Tambah Data" untuk membuat rekaman pertama.</p>
+      </div>
+
+      <div id="error-state" class="hidden p-8 text-center space-y-3">
+        <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+          <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+        </div>
+        <h3 class="font-bold text-slate-800">Gagal Memuat Data</h3>
+        <p id="error-message-text" class="text-xs text-red-600 max-w-md mx-auto"></p>
+        <button id="btn-retry" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-slate-700">Coba Lagi</button>
+      </div>
+
+      <!-- Table Container -->
+      <div id="table-container" class="hidden overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-600 border-collapse">
+          <thead class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <tr>
+              <th class="py-3 px-4">Judul</th>
+              <th class="py-3 px-4">Kategori</th>
+              <th class="py-3 px-4">Status</th>
+              <th class="py-3 px-4">Penulis</th>
+              <th class="py-3 px-4">Waktu Buat</th>
+              <th class="py-3 px-4 text-right">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="data-table-body" class="divide-y divide-slate-100">
+            <!-- Render via Section 17 -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ==========================================================================
+       SECTION 6: MODAL & DIALOG COMPONENT
+       ========================================================================== -->
+  <div id="item-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-fade-in">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 id="modal-title" class="font-bold text-slate-800">Tambah Data Baru</h3>
+        <button id="btn-close-modal" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- ==========================================================================
+           SECTION 10: CRUD FORM & INPUT VALIDATION
+           ========================================================================== -->
+      <form id="crud-form" class="p-6 space-y-4">
+        <input type="hidden" id="form-item-id">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Judul *</label>
+          <input type="text" id="form-title" required placeholder="Masukkan judul data" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Kategori</label>
+            <input type="text" id="form-category" placeholder="Contoh: Berita, Log" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Status</label>
+            <select id="form-status" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              <option value="Published">Published</option>
+              <option value="Draft">Draft</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Penulis</label>
+          <input type="text" id="form-author" placeholder="Nama penulis / pengunggah" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Konten / Keterangan</label>
+          <textarea id="form-content" rows="3" placeholder="Deskripsi atau rincian data..." class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
+          <button type="button" id="btn-cancel-form" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">Batal</button>
+          <button type="submit" id="btn-submit-form" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-semibold transition-all shadow-md shadow-blue-200">
+            <span id="btn-submit-text">Simpan</span>
+            <span id="btn-submit-spinner" class="hidden">
+              <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       SECTION 5: TOAST NOTIFICATION ENGINE
+       ========================================================================== -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm"></div>
+
+</div>
+
+<!-- JAVASCRIPT ARCHITECTURE -->
+<script>
+  /* ==========================================================================
+   * SECTION 4: GLOBAL CONFIG & STATE STORE
+   * ========================================================================== */
+  const AppConfig = {
+    // GANTI DENGAN URL WEB APP DEPLOYMENT GOOGLE APPS SCRIPT ANDA (/exec)
+    API_URL: 'https://script.google.com/macros/s/AKfycbx_GANTI_DENGAN_DEPLOYMENT_ID/exec',
+    TIMEOUT_MS: 20000
+  };
+
+  const AppState = {
+    items: [],
+    categories: [],
+    loading: false,
+    filter: {
+      search: '',
+      status: '',
+      category: ''
+    }
+  };
+
+  /* ==========================================================================
+   * SECTION 5: TOAST SYSTEM IMPLEMENTATION
+   * ========================================================================== */
+  const Toast = {
+    show: function(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      
+      const bgColors = {
+        success: 'bg-emerald-600 text-white',
+        error: 'bg-red-600 text-white',
+        warning: 'bg-amber-600 text-white',
+        info: 'bg-slate-800 text-white'
+      };
+
+      toast.className = `px-4 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center justify-between gap-3 animate-fade-in ${bgColors[type] || bgColors.info}`;
+      toast.innerHTML = `<span>${message}</span>`;
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+  };
+
+  /* ==========================================================================
+   * SECTION 14: FETCH CLIENT & NETWORK ADAPTER (Mengatasi CORS & 302 GAS)
+   * ========================================================================== */
+  const FetchClient = {
+    request: async function(action, payload = {}) {
+      if (!AppConfig.API_URL || AppConfig.API_URL.includes('GANTI_DENGAN_DEPLOYMENT_ID')) {
+        throw new Error('API_URL belum dikonfigurasi. Masukkan URL Web App GAS Anda!');
+      }
+
+      const bodyData = {
+        action: action,
+        ...payload
+      };
+
+      // Trik vital GAS: Menggunakan text/plain mencegah CORS OPTIONS Preflight
+      const response = await fetch(AppConfig.API_URL, {
+        method: 'POST',
+        mode: 'cors',
+        redirect: 'follow',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(bodyData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
+      }
+
+      const json = await response.json();
+      if (!json.success) {
+        throw new Error(json.error || 'Terjadi kesalahan pada respon backend.');
+      }
+      return json.data;
+    }
+  };
+
+  /* ==========================================================================
+   * SECTION 15: API SERVICE LAYER
+   * ========================================================================== */
+  const ApiService = {
+    ping: () => FetchClient.request('ping'),
+    list: (params) => FetchClient.request('list', params),
+    stats: () => FetchClient.request('stats'),
+    create: (data) => FetchClient.request('create', { data }),
+    update: (id, data) => FetchClient.request('update', { id, data }),
+    delete: (id) => FetchClient.request('delete', { id })
+  };
+
+  /* ==========================================================================
+   * SECTION 16: REACTIVE CONTROLLERS
+   * ========================================================================== */
+  const AppController = {
+    init: async function() {
+      lucide.createIcons();
+      this.bindEvents();
+      await this.checkHealth();
+      await this.loadData();
+    },
+
+    checkHealth: async function() {
+      const pill = document.getElementById('connection-pill');
+      try {
+        await ApiService.ping();
+        pill.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200';
+        pill.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>Terhubung ke GAS</span>';
+      } catch (e) {
+        pill.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200';
+        pill.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-500"></span><span>Offline / Konfigurasi URL</span>';
+      }
+    },
+
+    loadData: async function() {
+      UIRenderer.setLoading(true);
+      try {
+        const [items, stats] = await Promise.all([
+          ApiService.list(),
+          ApiService.stats().catch(() => null)
+        ]);
+
+        AppState.items = items || [];
+        if (stats) {
+          UIRenderer.renderKPI(stats);
+        } else {
+          this.calculateLocalKPI();
+        }
+
+        this.updateCategoryOptions();
+        this.applyFilter();
+      } catch (err) {
+        UIRenderer.showError(err.message);
+      } finally {
+        UIRenderer.setLoading(false);
+      }
+    },
+
+    calculateLocalKPI: function() {
+      const total = AppState.items.length;
+      const published = AppState.items.filter(i => i.status === 'Published').length;
+      const drafts = AppState.items.filter(i => i.status === 'Draft').length;
+      const categories = [...new Set(AppState.items.map(i => i.category).filter(Boolean))];
+      UIRenderer.renderKPI({ total, published, drafts, categories });
+    },
+
+    updateCategoryOptions: function() {
+      const catSelect = document.getElementById('filter-category');
+      const uniqueCats = [...new Set(AppState.items.map(i => i.category).filter(Boolean))];
+      catSelect.innerHTML = '<option value="">Semua Kategori</option>';
+      uniqueCats.forEach(c => {
+        catSelect.innerHTML += `<option value="${c}">${c}</option>`;
+      });
+    },
+
+    applyFilter: function() {
+      const query = AppState.filter.search.toLowerCase();
+      const status = AppState.filter.status;
+      const cat = AppState.filter.category;
+
+      const filtered = AppState.items.filter(item => {
+        const matchSearch = (item.title || '').toLowerCase().includes(query) || (item.content || '').toLowerCase().includes(query);
+        const matchStatus = !status || item.status === status;
+        const matchCat = !cat || item.category === cat;
+        return matchSearch && matchStatus && matchCat;
+      });
+
+      UIRenderer.renderTable(filtered);
+    },
+
+    handleSave: async function(e) {
+      e.preventDefault();
+      const submitBtn = document.getElementById('btn-submit-form');
+      const spinner = document.getElementById('btn-submit-spinner');
+      const btnText = document.getElementById('btn-submit-text');
+
+      const id = document.getElementById('form-item-id').value;
+      const payload = {
+        title: document.getElementById('form-title').value.trim(),
+        category: document.getElementById('form-category').value.trim() || 'General',
+        status: document.getElementById('form-status').value,
+        author: document.getElementById('form-author').value.trim() || 'Admin',
+        content: document.getElementById('form-content').value.trim()
+      };
+
+      try {
+        submitBtn.disabled = true;
+        spinner.classList.remove('hidden');
+        btnText.textContent = 'Menyimpan...';
+
+        if (id) {
+          await ApiService.update(id, payload);
+          Toast.show('Data berhasil diperbarui!', 'success');
+        } else {
+          await ApiService.create(payload);
+          Toast.show('Data baru berhasil ditambahkan!', 'success');
+        }
+
+        Modal.close();
+        await this.loadData();
+      } catch (err) {
+        Toast.show('Gagal menyimpan: ' + err.message, 'error');
+      } finally {
+        submitBtn.disabled = false;
+        spinner.classList.add('hidden');
+        btnText.textContent = 'Simpan';
+      }
+    },
+
+    handleDelete: async function(id) {
+      if (!confirm('Apakah Anda yakin ingin menghapus data ini?')) return;
+      try {
+        Toast.show('Sedang menghapus data...', 'info');
+        await ApiService.delete(id);
+        Toast.show('Data berhasil dihapus!', 'success');
+        await this.loadData();
+      } catch (err) {
+        Toast.show('Gagal menghapus: ' + err.message, 'error');
+      }
+    },
+
+    /* ==========================================================================
+     * SECTION 18: EVENT LISTENERS & HOTKEYS
+     * ========================================================================== */
+    bindEvents: function() {
+      document.getElementById('btn-refresh').addEventListener('click', () => this.loadData());
+      document.getElementById('btn-retry').addEventListener('click', () => this.loadData());
+      document.getElementById('btn-open-create-modal').addEventListener('click', () => Modal.open());
+      document.getElementById('btn-close-modal').addEventListener('click', () => Modal.close());
+      document.getElementById('btn-cancel-form').addEventListener('click', () => Modal.close());
+      document.getElementById('crud-form').addEventListener('submit', (e) => this.handleSave(e));
+
+      // Filter events
+      document.getElementById('search-input').addEventListener('input', (e) => {
+        AppState.filter.search = e.target.value;
+        this.applyFilter();
+      });
+
+      document.getElementById('filter-status').addEventListener('change', (e) => {
+        AppState.filter.status = e.target.value;
+        this.applyFilter();
+      });
+
+      document.getElementById('filter-category').addEventListener('change', (e) => {
+        AppState.filter.category = e.target.value;
+        this.applyFilter();
+      });
+
+      // Escape key to close modal
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') Modal.close();
+      });
+    }
+  };
+
+  /* ==========================================================================
+   * SECTION 6: MODAL COMPONENT LOGIC
+   * ========================================================================== */
+  const Modal = {
+    open: function(item = null) {
+      const modal = document.getElementById('item-modal');
+      const title = document.getElementById('modal-title');
+      document.getElementById('crud-form').reset();
+
+      if (item) {
+        title.textContent = 'Edit Data';
+        document.getElementById('form-item-id').value = item.id;
+        document.getElementById('form-title').value = item.title || '';
+        document.getElementById('form-category').value = item.category || '';
+        document.getElementById('form-status').value = item.status || 'Draft';
+        document.getElementById('form-author').value = item.author || '';
+        document.getElementById('form-content').value = item.content || '';
+      } else {
+        title.textContent = 'Tambah Data Baru';
+        document.getElementById('form-item-id').value = '';
+      }
+
+      modal.classList.remove('hidden');
+    },
+
+    close: function() {
+      document.getElementById('item-modal').classList.add('hidden');
+    }
+  };
+
+  /* ==========================================================================
+   * SECTION 17: UI RENDER ENGINE
+   * ========================================================================== */
+  const UIRenderer = {
+    setLoading: function(isLoading) {
+      const loading = document.getElementById('loading-state');
+      const table = document.getElementById('table-container');
+      const empty = document.getElementById('empty-state');
+      const error = document.getElementById('error-state');
+
+      if (isLoading) {
+        loading.classList.remove('hidden');
+        table.classList.add('hidden');
+        empty.classList.add('hidden');
+        error.classList.add('hidden');
+      } else {
+        loading.classList.add('hidden');
+      }
+    },
+
+    showError: function(msg) {
+      document.getElementById('table-container').classList.add('hidden');
+      document.getElementById('empty-state').classList.add('hidden');
+      const error = document.getElementById('error-state');
+      error.classList.remove('hidden');
+      document.getElementById('error-message-text').textContent = msg;
+    },
+
+    renderKPI: function(stats) {
+      document.getElementById('kpi-total').textContent = stats.total ?? '-';
+      document.getElementById('kpi-published').textContent = stats.published ?? '-';
+      document.getElementById('kpi-drafts').textContent = stats.drafts ?? '-';
+      document.getElementById('kpi-categories').textContent = Array.isArray(stats.categories) ? stats.categories.length : '-';
+    },
+
+    renderTable: function(items) {
+      const tbody = document.getElementById('data-table-body');
+      const tableContainer = document.getElementById('table-container');
+      const emptyState = document.getElementById('empty-state');
+
+      if (items.length === 0) {
+        tableContainer.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        lucide.createIcons();
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      tableContainer.classList.remove('hidden');
+
+      tbody.innerHTML = items.map(item => {
+        const isPublished = item.status === 'Published';
+        const badgeColor = isPublished ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200';
+        const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+
+        return `
+          <tr class="hover:bg-slate-50/80 transition-colors">
+            <td class="py-3 px-4 font-semibold text-slate-800">${item.title}</td>
+            <td class="py-3 px-4">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">${item.category || 'General'}</span>
+            </td>
+            <td class="py-3 px-4">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeColor}">${item.status}</span>
+            </td>
+            <td class="py-3 px-4 text-xs text-slate-500">${item.author || '-'}</td>
+            <td class="py-3 px-4 text-xs text-slate-400">${dateStr}</td>
+            <td class="py-3 px-4 text-right space-x-1">
+              <button onclick='Modal.open(${JSON.stringify(item).replace(/'/g, "&apos;")})' class="p-1.5 text-slate-500 hover:text-blue-600 rounded-lg hover:bg-slate-100" title="Edit">
+                <i data-lucide="edit-3" class="w-4 h-4"></i>
+              </button>
+              <button onclick="AppController.handleDelete('${item.id}')" class="p-1.5 text-slate-500 hover:text-red-600 rounded-lg hover:bg-slate-100" title="Hapus">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+  };
+
+  /* ==========================================================================
+   * SECTION 19: LIFECYCLE INITIALIZER (BOOTSTRAP)
+   * ========================================================================== */
+  document.addEventListener('DOMContentLoaded', () => {
+    AppController.init();
+  });
+</script>
